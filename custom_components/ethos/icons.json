@@ -1,5 +1,10 @@
 {
   "entity": {
+    "number": {
+      "amount_today": {
+        "default": "mdi:counter"
+      }
+    },
     "switch": {
       "done_today": {
         "default": "mdi:checkbox-blank-circle-outline",

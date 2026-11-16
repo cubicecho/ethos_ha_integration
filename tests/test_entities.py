@@ -6,13 +6,13 @@ from datetime import date
 
 import pytest
 from homeassistant.const import STATE_OFF, STATE_ON, STATE_UNAVAILABLE
-from homeassistant.exceptions import HomeAssistantError
+from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 from homeassistant.helpers import device_registry as dr
 
 from custom_components.ethos.api import EthosApiError
 from custom_components.ethos.const import DOMAIN
 
-from .conftest import HABIT_READ, HABIT_RUN, MOCK_HABITS, TODAY, habit_with
+from .conftest import HABIT_READ, HABIT_RUN, HABIT_WATER, MOCK_HABITS, TODAY, habit_with
 
 
 def _habit_device(hass, entry, habit_id):
@@ -26,6 +26,8 @@ def _habit_device(hass, entry, habit_id):
 RUN_SWITCH = "switch.run_done_today"
 READ_SWITCH = "switch.read_done_today"
 RUN_PROGRESS = "sensor.run_progress"
+WATER_SWITCH = "switch.water_done_today"
+WATER_AMOUNT = "number.water_amount_today"
 
 
 async def test_switch_shows_today(hass, setup_integration):
@@ -72,7 +74,7 @@ async def test_turn_on_marks_today(hass, setup_integration, mock_api_client):
     )
 
     mock_api_client.mark_habit.assert_awaited_once_with(
-        HABIT_READ, TODAY, TODAY, status="done", note=None, partial=False
+        HABIT_READ, TODAY, TODAY, status="done", note=None, partial=False, amount=None
     )
     assert hass.states.get(READ_SWITCH).state == STATE_ON
 
@@ -101,7 +103,13 @@ async def test_mark_service_with_day_status_and_note(hass, setup_integration, mo
     )
 
     mock_api_client.mark_habit.assert_awaited_once_with(
-        HABIT_RUN, "2026-11-15", TODAY, status="skipped", note="Travelling", partial=False
+        HABIT_RUN,
+        "2026-11-15",
+        TODAY,
+        status="skipped",
+        note="Travelling",
+        partial=False,
+        amount=None,
     )
     day = mock_api_client.mark_habit.await_args.args[1]
     assert day == date(2026, 11, 15).isoformat()
@@ -116,7 +124,7 @@ async def test_mark_service_targets_a_habit_device(hass, setup_integration, mock
     )
 
     mock_api_client.mark_habit.assert_awaited_once_with(
-        HABIT_READ, TODAY, TODAY, status="done", note=None, partial=True
+        HABIT_READ, TODAY, TODAY, status="done", note=None, partial=True, amount=None
     )
 
 
@@ -158,6 +166,111 @@ async def test_rename_follows_ethos(hass, setup_integration, mock_api_client):
     await hass.async_block_till_done()
 
     assert _habit_device(hass, setup_integration, HABIT_RUN).name == "Jog"
+
+
+async def test_amount_only_for_habits_that_count(hass, setup_integration):
+    state = hass.states.get(WATER_AMOUNT)
+    assert state.state == "5"
+    assert state.attributes["daily_amount"] == 8
+    assert state.attributes["max"] == 100_000
+    assert hass.states.get("number.run_amount_today") is None
+    assert hass.states.get("number.read_amount_today") is None
+
+
+async def test_short_day_is_on_with_its_amount(hass, setup_integration):
+    state = hass.states.get(WATER_SWITCH)
+    assert state.state == STATE_ON
+    assert state.attributes["partial"] is True
+    assert state.attributes["amount"] == 5
+    assert state.attributes["daily_amount"] == 8
+
+
+async def test_set_amount_marks_the_total_and_keeps_the_note(
+    hass, setup_integration, mock_api_client
+):
+    full = habit_with(HABIT_WATER)
+    full["entries"][0].update(amount=8, partial=False)
+    mock_api_client.mark_habit.return_value = full
+
+    await hass.services.async_call(
+        "number", "set_value", {"entity_id": WATER_AMOUNT, "value": 8}, blocking=True
+    )
+
+    mock_api_client.mark_habit.assert_awaited_once_with(
+        HABIT_WATER, TODAY, TODAY, status="done", note="Big bottle", partial=False, amount=8
+    )
+    assert hass.states.get(WATER_AMOUNT).state == "8"
+
+
+async def test_set_amount_to_zero_clears_today(hass, setup_integration, mock_api_client):
+    mock_api_client.clear_habit.return_value = habit_with(HABIT_WATER, entries=[])
+
+    await hass.services.async_call(
+        "number", "set_value", {"entity_id": WATER_AMOUNT, "value": 0}, blocking=True
+    )
+
+    mock_api_client.clear_habit.assert_awaited_once_with(HABIT_WATER, TODAY, TODAY)
+    mock_api_client.mark_habit.assert_not_awaited()
+    assert hass.states.get(WATER_AMOUNT).state == "0"
+
+
+async def test_set_amount_refuses_a_fraction(hass, setup_integration, mock_api_client):
+    with pytest.raises(ServiceValidationError):
+        await hass.services.async_call(
+            "number", "set_value", {"entity_id": WATER_AMOUNT, "value": 2.5}, blocking=True
+        )
+    mock_api_client.mark_habit.assert_not_awaited()
+
+
+async def test_skipped_day_reads_zero(hass, mock_api_client, mock_config_entry):
+    habits = copy.deepcopy(MOCK_HABITS)
+    habits[2]["entries"] = [
+        {
+            "day": TODAY,
+            "status": "skipped",
+            "note": None,
+            "partial": False,
+            "amount": 1,
+            "dailyAmount": 1,
+        }
+    ]
+    mock_api_client.get_habits.return_value = habits
+    from unittest.mock import patch
+
+    with patch("custom_components.ethos.EthosApiClient", return_value=mock_api_client):
+        await hass.config_entries.async_setup(mock_config_entry.entry_id)
+        await hass.async_block_till_done()
+
+    assert hass.states.get(WATER_AMOUNT).state == "0"
+    assert hass.states.get(WATER_SWITCH).attributes["amount"] is None
+
+
+async def test_amount_follows_the_daily_amount(hass, setup_integration, mock_api_client):
+    coordinator = setup_integration.runtime_data.coordinator
+    # Read starts asking for 3 a day, and Water goes back to one.
+    mock_api_client.get_habits.return_value = [
+        copy.deepcopy(MOCK_HABITS[0]),
+        habit_with(HABIT_READ, dailyAmount=3),
+        habit_with(HABIT_WATER, dailyAmount=1),
+    ]
+    await coordinator.async_refresh()
+    await hass.async_block_till_done()
+
+    assert hass.states.get("number.read_amount_today").state == "0"
+    assert hass.states.get(WATER_AMOUNT).state == STATE_UNAVAILABLE
+
+
+async def test_mark_service_with_amount(hass, setup_integration, mock_api_client):
+    await hass.services.async_call(
+        DOMAIN,
+        "mark_habit",
+        {"entity_id": WATER_SWITCH, "day": "2026-11-15", "amount": 3},
+        blocking=True,
+    )
+
+    mock_api_client.mark_habit.assert_awaited_once_with(
+        HABIT_WATER, "2026-11-15", TODAY, status="done", note=None, partial=False, amount=3
+    )
 
 
 async def test_unload(hass, setup_integration):

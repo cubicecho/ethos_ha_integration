@@ -1,6 +1,6 @@
 # Ethos for Home Assistant
 
-Brings your Ethos habits into Home Assistant. Every open habit gets a **Done today** switch, which you flip to tick today off, and a **Progress** sensor showing the days kept this period against what the habit asks. Two services cover the rest: skipping a day, marking another day, notes and smaller versions.
+Brings your Ethos habits into Home Assistant. Every open habit gets a **Done today** switch, which you flip to tick today off, and a **Progress** sensor showing the days kept this period against what the habit asks. A habit that asks for more than one of something a day ("8 glasses of water") also gets an **Amount today** number. Two services cover the rest: skipping a day, marking another day, notes and smaller versions.
 
 ## Install
 
@@ -36,10 +36,13 @@ Each habit is a device named after it, with:
 
 | Entity | State | Attributes |
 |--------|-------|------------|
-| `switch.<habit>_done_today` | on when today is kept | `status` (`done` / `skipped`), `partial`, `note`, `cue`, `color` |
+| `switch.<habit>_done_today` | on when today is kept | `status` (`done` / `skipped`), `partial`, `note`, `amount`, `daily_amount`, `cue`, `color` |
 | `sensor.<habit>_progress` | days kept this period | `target`, `effective_target` (after skips), `skipped`, `remaining`, `met`, `period`, `period_start`, `period_end` |
+| `number.<habit>_amount_today` | today's total (0 when untouched) | `daily_amount` |
 
-Turning the switch **on** marks today kept. Turning it **off** clears today, so it counts as untouched, not missed. A skipped day shows as off with `status: skipped`. "Today" is Home Assistant's local date, and everything rolls over just after midnight. Archived habits go unavailable.
+The number exists only for habits whose *times per day* is more than 1. Setting it records today's total, like the app's stepper: short of the daily amount is a smaller version, past it is allowed, and 0 clears the day. The day's note is kept. If the habit goes back to once a day, the number goes unavailable.
+
+Turning the switch **on** marks today kept (the whole daily amount, for a habit that counts). Turning it **off** clears today, so it counts as untouched, not missed. A skipped day shows as off with `status: skipped`. "Today" is Home Assistant's local date, and everything rolls over just after midnight. Archived habits go unavailable.
 
 ### Services
 
@@ -63,6 +66,14 @@ data:
   partial: true
   note: Just a mile
 
+# Six glasses of water yesterday
+action: ethos.mark_habit
+target:
+  entity_id: switch.water_done_today
+data:
+  day: "2026-11-15"
+  amount: 6
+
 # Undo a day
 action: ethos.clear_habit
 target:
@@ -71,4 +82,4 @@ data:
   day: "2026-11-15"
 ```
 
-Ethos's rules still apply. A period allows at most two skips, a smaller version must be a kept day (not a skip), and an archived habit can't be marked. A refusal comes back as an error with Ethos's message.
+Ethos's rules still apply. A period allows at most two skips, a smaller version or an amount must be on a kept day (not a skip), an amount is 1 to 100,000, and an archived habit can't be marked. A refusal comes back as an error with Ethos's message.

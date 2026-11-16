@@ -16,6 +16,7 @@ TODAY = "2026-11-16"  # a Monday
 
 HABIT_RUN = "aaaaaaaa-0000-0000-0000-000000000001"
 HABIT_READ = "aaaaaaaa-0000-0000-0000-000000000002"
+HABIT_WATER = "aaaaaaaa-0000-0000-0000-000000000004"
 
 # As EthosApiClient.get_habits returns them: counted for TODAY.
 MOCK_HABITS = [
@@ -27,6 +28,7 @@ MOCK_HABITS = [
         "color": "#e11d48",
         "period": "week",
         "targetCount": 3,
+        "dailyAmount": 1,
         "current": {
             "start": "2026-11-16",
             "end": "2026-11-23",
@@ -36,7 +38,16 @@ MOCK_HABITS = [
             "effectiveTarget": 3,
             "met": False,
         },
-        "entries": [{"day": TODAY, "status": "done", "note": None, "partial": False}],
+        "entries": [
+            {
+                "day": TODAY,
+                "status": "done",
+                "note": None,
+                "partial": False,
+                "amount": 1,
+                "dailyAmount": 1,
+            }
+        ],
     },
     {
         "id": HABIT_READ,
@@ -46,6 +57,7 @@ MOCK_HABITS = [
         "color": "#2563eb",
         "period": "day",
         "targetCount": 1,
+        "dailyAmount": 1,
         "current": {
             "start": TODAY,
             "end": "2026-11-17",
@@ -56,6 +68,36 @@ MOCK_HABITS = [
             "met": False,
         },
         "entries": [],
+    },
+    {
+        # Eight glasses a day, five so far, with a note to keep.
+        "id": HABIT_WATER,
+        "name": "Water",
+        "notes": None,
+        "cue": None,
+        "color": "#0891b2",
+        "period": "day",
+        "targetCount": 1,
+        "dailyAmount": 8,
+        "current": {
+            "start": TODAY,
+            "end": "2026-11-17",
+            "done": 1,
+            "skipped": 0,
+            "target": 1,
+            "effectiveTarget": 1,
+            "met": True,
+        },
+        "entries": [
+            {
+                "day": TODAY,
+                "status": "done",
+                "note": "Big bottle",
+                "partial": True,
+                "amount": 5,
+                "dailyAmount": 8,
+            }
+        ],
     },
 ]
 

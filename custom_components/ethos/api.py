@@ -19,9 +19,9 @@ STATUS_SKIPPED = "skipped"
 # about the caller's own today: Ethos takes the day from the client, because a
 # day is the keeper's, not the server's.
 _HABIT_FIELDS = """
-  id name notes cue color period targetCount
+  id name notes cue color period targetCount dailyAmount
   current(today: $today) { start end done skipped target effectiveTarget met }
-  entries(where: { day: { eq: $today } }) { day status note partial }
+  entries(where: { day: { eq: $today } }) { day status note partial amount dailyAmount }
 """
 
 
@@ -187,21 +187,27 @@ class EthosApiClient:
         status: str = STATUS_DONE,
         note: str | None = None,
         partial: bool = False,
+        amount: int | None = None,
     ) -> dict[str, Any]:
         """Record one day of a habit. The day is the key: marking it again rewrites it.
 
         ``status`` is ``done`` or ``skipped``. ``partial`` (a smaller version)
-        is only for a kept day. Ethos refuses an archived habit, and a skip
-        past the period's cap. ``today`` only shapes the answer.
+        is only for a kept day. ``amount`` is the day's total, never a step;
+        left out, a kept day is the habit's whole daily amount, and one short
+        of it is stored as a smaller version. Ethos refuses an archived habit,
+        a skip past the period's cap, and an amount on a skip. ``note`` is
+        rewritten on every mark, so leaving it out clears the day's.
+        ``today`` only shapes the answer.
         """
         result = await self._graphql(
             f"""
             mutation MarkHabit(
               $habitId: ID!, $day: String!, $status: String, $note: String,
-              $partial: Boolean, $today: String!
+              $partial: Boolean, $amount: Int, $today: String!
             ) {{
               markHabit(
-                habitId: $habitId, day: $day, status: $status, note: $note, partial: $partial
+                habitId: $habitId, day: $day, status: $status, note: $note,
+                partial: $partial, amount: $amount
               ) {{ {_HABIT_FIELDS} }}
             }}
             """,
@@ -211,6 +217,7 @@ class EthosApiClient:
                 "status": status,
                 "note": note,
                 "partial": partial,
+                "amount": amount,
                 "today": today,
             },
         )

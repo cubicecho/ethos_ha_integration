@@ -32,8 +32,11 @@ async def async_setup_entry(
 class EthosDoneTodaySwitch(EthosHabitEntity, SwitchEntity):
     """On when today is kept. On ticks today; off clears it (untouched, not missed).
 
-    A skipped day reads as off, with ``status: skipped``. Skipping, other days,
-    notes and smaller versions go through the ``ethos.mark_habit`` service.
+    A skipped day reads as off, with ``status: skipped``. On a habit with a
+    daily amount, on records the whole amount, and a short day is still on
+    (a smaller version); its number entity sets the day's total. Skipping,
+    other days, notes, amounts and smaller versions go through the
+    ``ethos.mark_habit`` service.
     """
 
     def __init__(self, coordinator, entry: ConfigEntry, habit_id: str) -> None:
@@ -57,6 +60,8 @@ class EthosDoneTodaySwitch(EthosHabitEntity, SwitchEntity):
             "status": entry.get("status"),
             "partial": bool(entry.get("partial")),
             "note": entry.get("note"),
+            "amount": entry.get("amount") if entry.get("status") == STATUS_DONE else None,
+            "daily_amount": habit.get("dailyAmount"),
             "cue": habit.get("cue"),
             "color": habit.get("color"),
         }
@@ -75,9 +80,10 @@ class EthosDoneTodaySwitch(EthosHabitEntity, SwitchEntity):
         status: str = STATUS_DONE,
         note: str | None = None,
         partial: bool = False,
+        amount: int | None = None,
     ) -> None:
         await self.coordinator.async_mark(
-            self.habit_id, day, status=status, note=note, partial=partial
+            self.habit_id, day, status=status, note=note, partial=partial, amount=amount
         )
 
     async def async_clear(self, day: date | None = None) -> None:

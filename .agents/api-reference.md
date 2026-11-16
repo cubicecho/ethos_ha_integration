@@ -43,21 +43,23 @@ query Habits($today: String!) {
     where: { archivedAt: { isNull: true } }
     orderBy: { position: { direction: asc, priority: 1 } }
   ) {
-    id name notes cue color period targetCount
+    id name notes cue color period targetCount dailyAmount
     current(today: $today) { start end done skipped target effectiveTarget met }
-    entries(where: { day: { eq: $today } }) { day status note partial }
+    entries(where: { day: { eq: $today } }) { day status note partial amount dailyAmount }
   }
 }
 ```
 - `period` is `day` | `week` (ISO, Monday first) | `month`.
 - `current.end` is exclusive (the day after the period's last).
+- `dailyAmount` (≥ 1) is "times per day". `targetCount` counts days; `dailyAmount` is what one of them holds.
+- `entries.amount` is the day's total. `entries.dailyAmount` snapshots the habit's at write time. A skip stores `1` / `1`, meaning nothing.
 - `entries.day` is a `YYYY-MM-DD` string, filtered with `StringFilter`. `status` is `done` | `skipped`. No row means untouched.
 
 ## Mutations
 
 | Mutation | Used for |
 |----------|----------|
-| `markHabit(habitId: ID!, day: String!, status: String = "done", note: String, partial: Boolean = false): Habit!` | switch on; `ethos.mark_habit`. Upserts the day's one row. `BAD_USER_INPUT` for a bad status, a skip past the cap (`maxSkipsPerPeriod`, 2), `partial` with a skip, or an archived habit |
-| `clearHabit(habitId: ID!, day: String!): Habit!` | switch off; `ethos.clear_habit`. Leaves the day untouched rather than missed |
+| `markHabit(habitId: ID!, day: String!, status: String = "done", note: String, partial: Boolean = false, amount: Int): Habit!` | switch on; amount number; `ethos.mark_habit`. Upserts the day's one row, rewriting `note` every time. `amount` left out is the whole daily amount; short of it is stored as partial. `BAD_USER_INPUT` for a bad status, a skip past the cap (`maxSkipsPerPeriod`, 2), `partial` or `amount` with a skip, an amount outside 1–100,000, or an archived habit |
+| `clearHabit(habitId: ID!, day: String!): Habit!` | switch off; amount number set to 0; `ethos.clear_habit`. Leaves the day untouched rather than missed |
 
 Both select the same habit fields as the query, with `$today` passed so `current` and `entries` are about the keeper's today.
