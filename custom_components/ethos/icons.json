@@ -1,0 +1,25 @@
+{
+  "entity": {
+    "switch": {
+      "done_today": {
+        "default": "mdi:checkbox-blank-circle-outline",
+        "state": {
+          "on": "mdi:check-circle"
+        }
+      }
+    },
+    "sensor": {
+      "progress": {
+        "default": "mdi:progress-check"
+      }
+    }
+  },
+  "services": {
+    "mark_habit": {
+      "service": "mdi:check-circle"
+    },
+    "clear_habit": {
+      "service": "mdi:close-circle-outline"
+    }
+  }
+}

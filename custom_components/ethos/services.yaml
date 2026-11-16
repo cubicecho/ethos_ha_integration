@@ -1,0 +1,39 @@
+mark_habit:
+  target:
+    entity:
+      integration: ethos
+      domain: switch
+    device:
+      integration: ethos
+  fields:
+    day:
+      selector:
+        date:
+    status:
+      default: done
+      selector:
+        select:
+          options:
+            - done
+            - skipped
+          translation_key: status
+    note:
+      selector:
+        text:
+          multiline: true
+    partial:
+      default: false
+      selector:
+        boolean:
+
+clear_habit:
+  target:
+    entity:
+      integration: ethos
+      domain: switch
+    device:
+      integration: ethos
+  fields:
+    day:
+      selector:
+        date:
