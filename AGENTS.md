@@ -3,6 +3,7 @@
 A Home Assistant custom integration that connects to an [Ethos](../../apps/ethos) instance (a habit tracker) to surface each open habit as:
 - a **"Done today" switch**: on when today is kept; on ticks today, off clears it
 - a **"Progress" sensor**: days kept in the period today falls in, with Ethos's tally as attributes
+- an **"Amount today" number**, only for a habit whose `dailyAmount` is over 1: today's total; setting it marks the day with that `amount`, 0 clears it
 - two **services**, `ethos.mark_habit` and `ethos.clear_habit`, for skips, other days, notes and smaller versions
 
 Built from [telos-ha-integration](../telos-ha-integration). Sign-in, the config flow and `oidc.py` are the same, renamed. Users configure a server URL. The integration then signs in as them, through Ethos's OIDC provider (device flow) or with a magic link, whichever the instance offers.
@@ -52,6 +53,8 @@ Raise `EthosConnectionError` for network failures, and `EthosAuthError` for 401/
 - **Recording a day goes only through `markHabit` / `clearHabit`.** There is no generated CRUD for entries. Marking a day again rewrites its one row.
 - **A skip is not a miss.** `status: skipped` is a deliberate decline, capped per period by the server. The switch reads off for a skipped day and says `status: skipped`. Turning it on overwrites the skip with a tick.
 - **A smaller version (`partial`) is a kept day,** only with `status: done`.
+- **An amount is the day's total, never a step.** `markHabit(amount:)` left out is the whole `dailyAmount`. Short of it, Ethos stores the day as partial; past it is allowed, up to `MAX_AMOUNT` (Ethos's `HABIT_DEFAULTS.maxAmount`). No amount on a skip.
+- **`markHabit` rewrites the note on every write.** Leaving `note` out wipes it. So the number entity sends the note the day already has, as the app's stepper does.
 - **Writes return the habit,** counted for the `today` sent, so the coordinator merges the answer (`_apply`) rather than refetching.
 - **Archived habits** drop out of the query (`archivedAt: { isNull: true }`). Their entities go unavailable, and their history stays in Ethos.
 

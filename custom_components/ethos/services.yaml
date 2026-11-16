@@ -25,6 +25,13 @@ mark_habit:
       default: false
       selector:
         boolean:
+    amount:
+      selector:
+        number:
+          min: 1
+          max: 100000
+          step: 1
+          mode: box
 
 clear_habit:
   target:

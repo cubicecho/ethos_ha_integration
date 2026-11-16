@@ -18,6 +18,7 @@ from homeassistant.helpers.typing import ConfigType
 
 from .api import STATUS_DONE, STATUS_SKIPPED, EthosApiClient, TokenSource
 from .const import (
+    ATTR_AMOUNT,
     ATTR_DAY,
     ATTR_NOTE,
     ATTR_PARTIAL,
@@ -30,6 +31,7 @@ from .const import (
     CONF_TOKEN,
     CONF_URL,
     DOMAIN,
+    MAX_AMOUNT,
     PLATFORMS,
     SERVICE_CLEAR_HABIT,
     SERVICE_MARK_HABIT,
@@ -68,6 +70,9 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
             ),
             vol.Optional(ATTR_NOTE): cv.string,
             vol.Optional(ATTR_PARTIAL, default=False): cv.boolean,
+            vol.Optional(ATTR_AMOUNT): vol.All(
+                vol.Coerce(int), vol.Range(min=1, max=MAX_AMOUNT)
+            ),
         },
         func="async_mark",
     )

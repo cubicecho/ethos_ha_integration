@@ -33,7 +33,7 @@ def habit_id_of(entry: ConfigEntry, device: DeviceEntry) -> str | None:
 
 
 def habit_device_info(entry: ConfigEntry, habit: dict[str, Any]) -> DeviceInfo:
-    """One device per habit, holding its switch and its sensor."""
+    """One device per habit, holding its switch, its sensor and, if it counts, its number."""
     return DeviceInfo(
         identifiers={habit_device_id(entry, habit["id"])},
         name=habit["name"],
@@ -48,13 +48,22 @@ def add_habit_entities(
     coordinator: EthosCoordinator,
     async_add_entities: AddEntitiesCallback,
     build: Callable[[str], Iterable[Entity]],
+    applies: Callable[[dict[str, Any]], bool] = lambda habit: True,
 ) -> None:
-    """Add a platform's entities for every habit, and for each new one as it appears."""
+    """Add a platform's entities for every habit, and for each new one as it appears.
+
+    ``applies`` limits them to the habits it accepts. A habit it turns away is
+    asked again on every update, so it gets its entities once it qualifies.
+    """
     known: set[str] = set()
 
     @callback
     def _add_new_habits() -> None:
-        new = [h for h in coordinator.habit_ids if h not in known]
+        new = [
+            habit_id
+            for habit_id in coordinator.habit_ids
+            if habit_id not in known and applies(coordinator.habit(habit_id) or {})
+        ]
         known.update(new)
         if new:
             async_add_entities(entity for habit_id in new for entity in build(habit_id))

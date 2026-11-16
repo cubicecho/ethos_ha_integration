@@ -68,6 +68,19 @@
     }
   },
   "entity": {
+    "number": {
+      "amount_today": {
+        "name": "Amount today",
+        "state_attributes": {
+          "daily_amount": {
+            "name": "Daily amount"
+          },
+          "habit_id": {
+            "name": "Habit ID"
+          }
+        }
+      }
+    },
     "switch": {
       "done_today": {
         "name": "Done today",
@@ -84,6 +97,12 @@
           },
           "note": {
             "name": "Note"
+          },
+          "amount": {
+            "name": "Amount"
+          },
+          "daily_amount": {
+            "name": "Daily amount"
           },
           "cue": {
             "name": "Cue"
@@ -157,6 +176,10 @@
         "partial": {
           "name": "Smaller version",
           "description": "You did less than you meant to. Still a kept day, counted whole. Only with status done."
+        },
+        "amount": {
+          "name": "Amount",
+          "description": "How much the day held, as a total (not one more). Defaults to the habit's whole daily amount; less is a smaller version. Only with status done."
         }
       }
     },

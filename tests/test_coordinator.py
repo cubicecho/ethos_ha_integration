@@ -15,7 +15,15 @@ from custom_components.ethos.api import (
 )
 from custom_components.ethos.coordinator import EthosCoordinator
 
-from .conftest import HABIT_READ, HABIT_RUN, MOCK_TOKEN, MOCK_URL, TODAY, habit_with
+from .conftest import (
+    HABIT_READ,
+    HABIT_RUN,
+    HABIT_WATER,
+    MOCK_TOKEN,
+    MOCK_URL,
+    TODAY,
+    habit_with,
+)
 
 
 async def test_update_keys_habits_by_id_in_order(hass, mock_api_client, mock_config_entry):
@@ -24,7 +32,7 @@ async def test_update_keys_habits_by_id_in_order(hass, mock_api_client, mock_con
 
     mock_api_client.get_habits.assert_awaited_once_with(TODAY)
     assert data["today"] == TODAY
-    assert list(data["habits"]) == [HABIT_RUN, HABIT_READ]
+    assert list(data["habits"]) == [HABIT_RUN, HABIT_READ, HABIT_WATER]
 
 
 async def test_expired_session_starts_reauth(hass, mock_api_client, mock_config_entry):
@@ -61,7 +69,7 @@ async def test_mark_applies_the_answer_without_refetching(
     await coordinator.async_mark(HABIT_READ)
 
     mock_api_client.mark_habit.assert_awaited_once_with(
-        HABIT_READ, TODAY, TODAY, status="done", note=None, partial=False
+        HABIT_READ, TODAY, TODAY, status="done", note=None, partial=False, amount=None
     )
     assert coordinator.habit(HABIT_READ) == kept
     assert mock_api_client.get_habits.await_count == 1
@@ -143,6 +151,7 @@ async def test_mark_habit_sends_the_day_and_status():
         "status": "skipped",
         "note": "Sick",
         "partial": False,
+        "amount": None,
         "today": TODAY,
     }
     json.dumps(session.post.call_args.kwargs["json"])  # serialisable as sent

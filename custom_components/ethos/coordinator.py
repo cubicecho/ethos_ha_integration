@@ -78,12 +78,22 @@ class EthosCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         status: str = STATUS_DONE,
         note: str | None = None,
         partial: bool = False,
+        amount: int | None = None,
     ) -> None:
-        """Record a day of a habit (today unless ``day`` says otherwise)."""
+        """Record a day of a habit (today unless ``day`` says otherwise).
+
+        ``amount`` is the day's total; left out, a kept day is the whole amount.
+        """
         today = local_today()
         try:
             habit = await self.client.mark_habit(
-                habit_id, _day(day, today), today, status=status, note=note, partial=partial
+                habit_id,
+                _day(day, today),
+                today,
+                status=status,
+                note=note,
+                partial=partial,
+                amount=amount,
             )
         except EthosApiError as err:
             # e.g. a skip past the period's cap, or an archived habit.

@@ -8,7 +8,10 @@ CONF_USER_ID = "user_id"
 # Ethos has no subscriptions, so polling is what notices a day kept in the app.
 DEFAULT_SCAN_INTERVAL = 5  # minutes
 
-PLATFORMS = ["sensor", "switch"]
+PLATFORMS = ["number", "sensor", "switch"]
+
+# The most one day of a habit can hold (Ethos's HABIT_DEFAULTS.maxAmount).
+MAX_AMOUNT = 100_000
 
 # How the entry signs in.
 CONF_AUTH_METHOD = "auth_method"
@@ -31,3 +34,4 @@ ATTR_DAY = "day"
 ATTR_STATUS = "status"
 ATTR_NOTE = "note"
 ATTR_PARTIAL = "partial"
+ATTR_AMOUNT = "amount"
